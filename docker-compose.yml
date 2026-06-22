@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: securechat-postgres
+    environment:
+      POSTGRES_DB: securechat
+      POSTGRES_USER: securechat_user
+      POSTGRES_PASSWORD: securechat_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - securechat_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  securechat_postgres_data:

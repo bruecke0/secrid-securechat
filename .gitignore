@@ -1,0 +1,18 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Frontend build output (populate when frontend is added)
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/build/
