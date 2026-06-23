@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.sild.securechat_backend.auth.dto.AuthResponse;
+import com.sild.securechat_backend.auth.dto.LoginRequest;
 import com.sild.securechat_backend.auth.dto.RegisterRequest;
 import com.sild.securechat_backend.user.Role;
 import com.sild.securechat_backend.user.User;
@@ -47,6 +48,30 @@ public class AuthService {
             savedUser.getEmail(),
             savedUser.getRole().name(),
             "User registered successfully"
+        );
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        User user = appUserRepository.findByUsername(request.usernameOrEmail())
+            .or(() -> appUserRepository.findByEmail(request.usernameOrEmail()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username/email or password"));
+        
+        boolean passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
+
+        if (!passwordMatches) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username/email or password");
+        }
+
+        if (!user.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account is disabled");
+        }
+
+        return new AuthResponse(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getRole().name(),
+            "Login successful"
         );
     }
 }
