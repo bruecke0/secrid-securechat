@@ -11,15 +11,23 @@ import com.sild.securechat_backend.auth.dto.RegisterRequest;
 import com.sild.securechat_backend.user.Role;
 import com.sild.securechat_backend.user.User;
 import com.sild.securechat_backend.user.UserRepository;
+import com.sild.securechat_backend.securityevent.SecurityEventService;
+import com.sild.securechat_backend.securityevent.SecurityEventType;
+import com.sild.securechat_backend.securityevent.SecuritySeverity;
+
+
+import java.util.Optional;
 
 @Service
 public class AuthService {
     private final UserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityEventService securityEventService;
 
-    public AuthService(UserRepository appUserRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository appUserRepository, PasswordEncoder passwordEncoder, SecurityEventService securityEventService) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.securityEventService = securityEventService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -41,6 +49,14 @@ public class AuthService {
         );
 
         User savedUser = appUserRepository.save(newUser);
+
+        securityEventService.logEvent(
+            savedUser.getId(),
+            SecurityEventType.REGISTER_SUCCESS,
+            SecuritySeverity.LOW,
+            null, // IP address can be logged if available
+            "User registered successfully"
+        );
 
         return new AuthResponse(
             savedUser.getId(),

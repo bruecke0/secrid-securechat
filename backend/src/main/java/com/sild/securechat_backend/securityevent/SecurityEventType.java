@@ -1,0 +1,19 @@
+package com.sild.securechat_backend.securityevent;
+
+public enum SecurityEventType {
+    REGISTER_SUCCESS,
+    LOGIN_SUCCESS,
+    LOGIN_FAILURE,
+    ACCOUNT_LOCKED,
+    LOGOUT,
+
+    WEBSOCKET_CONNECTED,
+    WEBSOCKET_AUTH_FAILED,
+    ROOM_JOIN_DENIED,
+    MESSSAGE_SENT,
+    MESSAGE_RATE_LIMITED,
+    INVALID_MESSAGE_PAYLOAD,
+
+    USER_REPORTED,
+    ADMIN_ACTION
+}
