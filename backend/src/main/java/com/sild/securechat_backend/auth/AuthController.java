@@ -1,17 +1,21 @@
 package com.sild.securechat_backend.auth;
 
 import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 
 import com.sild.securechat_backend.auth.dto.AuthResponse;
 import com.sild.securechat_backend.auth.dto.LoginRequest;
+import com.sild.securechat_backend.auth.dto.LoginResponse;
 import com.sild.securechat_backend.auth.dto.RegisterRequest;
+import com.sild.securechat_backend.user.User;
 
 import jakarta.validation.Valid;
 
@@ -31,7 +35,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @GetMapping("/me")
+    public AuthResponse me(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return new AuthResponse(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getRole().name(),
+            "User details retrieved successfully"
+        );
     }
 }

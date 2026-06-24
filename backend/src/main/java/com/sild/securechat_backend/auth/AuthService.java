@@ -14,6 +14,7 @@ import com.sild.securechat_backend.user.UserRepository;
 import com.sild.securechat_backend.securityevent.SecurityEventService;
 import com.sild.securechat_backend.securityevent.SecurityEventType;
 import com.sild.securechat_backend.securityevent.SecuritySeverity;
+import com.sild.securechat_backend.auth.dto.LoginResponse;
 
 
 import java.util.Optional;
@@ -27,11 +28,18 @@ public class AuthService {
     private final UserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityEventService securityEventService;
+    private final JwtService jwtService;
 
-    public AuthService(UserRepository appUserRepository, PasswordEncoder passwordEncoder, SecurityEventService securityEventService) {
+    public AuthService(
+        UserRepository appUserRepository,
+        PasswordEncoder passwordEncoder,
+        SecurityEventService securityEventService,
+        JwtService jwtService
+    ) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.securityEventService = securityEventService;
+        this.jwtService = jwtService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -71,7 +79,7 @@ public class AuthService {
         );
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         Optional<User> userOptional = appUserRepository.findByUsername(request.usernameOrEmail())
             .or(() -> appUserRepository.findByEmail(request.usernameOrEmail()));
         
@@ -120,11 +128,15 @@ public class AuthService {
             "User logged in successfully"
         );
         
-        return new AuthResponse(
+        String token = jwtService.generateToken(user);
+        
+        return new LoginResponse(
             user.getId(),
             user.getUsername(),
             user.getEmail(),
             user.getRole().name(),
+            token,
+            "Bearer",
             "Login successful"
         );
     }
