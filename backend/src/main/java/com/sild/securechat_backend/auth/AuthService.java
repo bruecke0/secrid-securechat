@@ -1,5 +1,8 @@
 package com.sild.securechat_backend.auth;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -7,18 +10,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sild.securechat_backend.auth.dto.AuthResponse;
 import com.sild.securechat_backend.auth.dto.LoginRequest;
+import com.sild.securechat_backend.auth.dto.LoginResponse;
 import com.sild.securechat_backend.auth.dto.RegisterRequest;
-import com.sild.securechat_backend.user.Role;
-import com.sild.securechat_backend.user.User;
-import com.sild.securechat_backend.user.UserRepository;
 import com.sild.securechat_backend.securityevent.SecurityEventService;
 import com.sild.securechat_backend.securityevent.SecurityEventType;
 import com.sild.securechat_backend.securityevent.SecuritySeverity;
-import com.sild.securechat_backend.auth.dto.LoginResponse;
-
-
-import java.util.Optional;
-import java.time.LocalDateTime;
+import com.sild.securechat_backend.user.Role;
+import com.sild.securechat_backend.user.User;
+import com.sild.securechat_backend.user.UserRepository;
 
 @Service
 public class AuthService {
@@ -86,7 +85,7 @@ public class AuthService {
         if (userOptional.isEmpty()) {
             securityEventService.logEvent(
                 null,
-                SecurityEventType.LOGIN_FAILURE,
+                SecurityEventType.LOGIN_FAILED,
                 SecuritySeverity.MEDIUM,
                 null, // IP address can be logged if available
                 "Login failed for username/email: " + request.usernameOrEmail()
@@ -167,7 +166,7 @@ public class AuthService {
 
         securityEventService.logEvent(
             user.getId(),
-            SecurityEventType.LOGIN_FAILURE,
+            SecurityEventType.LOGIN_FAILED,
             SecuritySeverity.MEDIUM,
             null, // IP address can be logged if available
             "Login failed for username/email: " + user.getUsername()
