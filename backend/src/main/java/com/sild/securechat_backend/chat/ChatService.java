@@ -8,6 +8,7 @@ import com.sild.securechat_backend.chat.dto.MessageResponse;
 import com.sild.securechat_backend.securityevent.SecurityEventService;
 import com.sild.securechat_backend.securityevent.SecurityEventType;
 import com.sild.securechat_backend.securityevent.SecuritySeverity;
+import com.sild.securechat_backend.chat.dto.RoomMemberResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
@@ -111,6 +112,40 @@ public class ChatService {
             .toList();
     }
 
+    @Transactional
+    public ChatRoomResponse joinRoom(Long roomId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        if (roomMemberRepository.existsByRoomAndUser(room, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already a member of this room");
+        }
+
+        RoomMember membership = new RoomMember(
+            room, 
+            currentUser,
+            RoomMemberRole.MEMBER
+        );
+
+        RoomMember savedMembership = roomMemberRepository.save(membership);
+
+        return mapToRoomResponse(savedMembership);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RoomMemberResponse> getRoomMembers(Long roomId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        if (!roomMemberRepository.existsByRoomAndUser(room, currentUser)) {
+            logRoomAccessDenied(roomId, currentUser);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room");
+        }
+
+        return roomMemberRepository.findByRoomOrderByJoinedAtAsc(room)
+            .stream()
+            .map(this::mapToRoomMemberResponse)
+            .toList();
+    }
+
     private ChatRoom getRoomOrThrow(Long roomId) {
         return chatRoomRepository.findById(roomId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
@@ -147,6 +182,15 @@ public class ChatService {
             message.getSender().getUsername(),
             message.getContent(),
             message.getCreatedAt()
+        );
+    }
+
+    private RoomMemberResponse mapToRoomMemberResponse(RoomMember roomMember) {
+        return new RoomMemberResponse(
+            roomMember.getUser().getId(),
+            roomMember.getUser().getUsername(),
+            roomMember.getRole().name(),
+            roomMember.getJoinedAt()
         );
     }
 }

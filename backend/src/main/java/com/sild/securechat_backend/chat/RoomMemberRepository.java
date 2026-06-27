@@ -10,6 +10,8 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     List<RoomMember> findByUserOrderByJoinedAtDesc(User user);
 
+    List<RoomMember> findByRoomOrderByJoinedAtAsc(ChatRoom room);
+
     Optional<RoomMember> findByRoomAndUser(ChatRoom room, User user);
 
     boolean existsByRoomAndUser(ChatRoom room, User user);

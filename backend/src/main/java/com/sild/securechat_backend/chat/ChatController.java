@@ -4,6 +4,7 @@ import com.sild.securechat_backend.chat.dto.ChatRoomResponse;
 import com.sild.securechat_backend.chat.dto.CreateRoomRequest;
 import com.sild.securechat_backend.chat.dto.CreateMessageRequest;
 import com.sild.securechat_backend.chat.dto.MessageResponse;
+import com.sild.securechat_backend.chat.dto.RoomMemberResponse;
 import com.sild.securechat_backend.user.User;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -66,5 +67,25 @@ public class ChatController {
         User currentUser = (User) authentication.getPrincipal();
 
         return chatService.getMessages(roomId, currentUser);
+    }
+
+    @PostMapping("/{roomId}/join")
+    public ChatRoomResponse joinRoom(
+        @PathVariable Long roomId,
+        Authentication authentication
+    ) {
+        User currentUser = (User) authentication.getPrincipal();
+
+        return chatService.joinRoom(roomId, currentUser);
+    }
+
+    @GetMapping("/{roomId}/members")
+    public List<RoomMemberResponse> getRoomMembers(
+        @PathVariable Long roomId,
+        Authentication authentication
+    ) {
+        User currentUser = (User) authentication.getPrincipal();
+
+        return chatService.getRoomMembers(roomId, currentUser);
     }
 }
