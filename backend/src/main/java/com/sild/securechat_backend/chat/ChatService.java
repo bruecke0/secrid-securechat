@@ -3,23 +3,37 @@ package com.sild.securechat_backend.chat;
 import com.sild.securechat_backend.chat.dto.ChatRoomResponse;
 import com.sild.securechat_backend.chat.dto.CreateRoomRequest;
 import com.sild.securechat_backend.user.User;
+import com.sild.securechat_backend.chat.dto.CreateMessageRequest;
+import com.sild.securechat_backend.chat.dto.MessageResponse;
+import com.sild.securechat_backend.securityevent.SecurityEventService;
+import com.sild.securechat_backend.securityevent.SecurityEventType;
+import com.sild.securechat_backend.securityevent.SecuritySeverity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Collections;
 
 @Service
 public class ChatService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final RoomMemberRepository roomMemberRepository;
+    private final MessageRepository messageRepository;
+    private final SecurityEventService securityEventService;
 
     public ChatService(
             ChatRoomRepository chatRoomRepository,
-            RoomMemberRepository roomMemberRepository
+            RoomMemberRepository roomMemberRepository,
+            MessageRepository messageRepository,
+            SecurityEventService securityEventService
     ) {
         this.chatRoomRepository = chatRoomRepository;
         this.roomMemberRepository = roomMemberRepository;
+        this.messageRepository = messageRepository;
+        this.securityEventService = securityEventService;
     }
 
     @Transactional
@@ -51,6 +65,67 @@ public class ChatService {
                 .toList();
     }
 
+    @Transactional
+    public MessageResponse sendMessage(Long roomId, CreateMessageRequest request, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        if (!roomMemberRepository.existsByRoomAndUser(room, currentUser)) {
+            logRoomAccessDenied(roomId, currentUser);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room");
+        }
+
+        Message message = new Message(
+            room,
+            currentUser,
+            request.content().trim()
+        );
+
+        Message savedMessage = messageRepository.save(message);
+
+        securityEventService.logEvent(
+            currentUser.getId(),
+            SecurityEventType.MESSAGE_SENT,
+            SecuritySeverity.LOW,
+            null,
+            "Message sent in room id: " + roomId
+        );
+
+        return mapToMessageResponse(savedMessage);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> getMessages(Long roomId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        if (!roomMemberRepository.existsByRoomAndUser(room, currentUser)) {
+            logRoomAccessDenied(roomId, currentUser);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room");   
+        }
+
+        List<Message> messages = messageRepository.findTop50ByRoomAndDeletedFalseOrderByCreatedAtDesc(room);
+
+        Collections.reverse(messages);
+
+        return messages.stream()
+            .map(this::mapToMessageResponse)
+            .toList();
+    }
+
+    private ChatRoom getRoomOrThrow(Long roomId) {
+        return chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+    }
+
+    private void logRoomAccessDenied(Long roomId, User currentUser) {
+        securityEventService.logEvent(
+            currentUser.getId(),
+            SecurityEventType.ROOM_JOIN_DENIED,
+            SecuritySeverity.MEDIUM,
+            null,
+            "User tried to access room without membership. Room id: " + roomId
+        );
+    }
+
     private ChatRoomResponse mapToRoomResponse(RoomMember roomMember) {
         ChatRoom room = roomMember.getRoom();
 
@@ -61,6 +136,17 @@ public class ChatService {
                 roomMember.getRole().name(),
                 room.getCreatedBy().getId(),
                 room.getCreatedAt()
+        );
+    }
+
+    private MessageResponse mapToMessageResponse(Message message) {
+        return new MessageResponse(
+            message.getId(),
+            message.getRoom().getId(),
+            message.getSender().getId(),
+            message.getSender().getUsername(),
+            message.getContent(),
+            message.getCreatedAt()
         );
     }
 }
