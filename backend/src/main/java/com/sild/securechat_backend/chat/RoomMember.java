@@ -84,6 +84,10 @@ public class RoomMember {
         return role;
     }
 
+    public void setRole(RoomMemberRole role) {
+        this.role = role;
+    }
+
     public LocalDateTime getJoinedAt() {
         return joinedAt;
     }

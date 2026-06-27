@@ -3,6 +3,9 @@ package com.sild.securechat_backend.chat;
 import com.sild.securechat_backend.chat.dto.ChatRoomResponse;
 import com.sild.securechat_backend.chat.dto.CreateRoomRequest;
 import com.sild.securechat_backend.user.User;
+
+import ch.qos.logback.core.joran.action.Action;
+
 import com.sild.securechat_backend.chat.dto.CreateMessageRequest;
 import com.sild.securechat_backend.chat.dto.MessageResponse;
 import com.sild.securechat_backend.securityevent.SecurityEventService;
@@ -190,6 +193,30 @@ public class ChatService {
         roomMemberRepository.delete(targetMembership);
 
         return new ActionResponse("Member removed from room");
+    }
+
+    @Transactional
+    public ActionResponse transferOwnership(Long roomId, Long targetUserId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        RoomMember currentUserMembership = roomMemberRepository.findByRoomAndUser(room, currentUser)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room"));
+        
+        if (currentUserMembership.getRole() != RoomMemberRole.MEMBER) {
+            logRoomAccessDenied(roomId, currentUser);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already the room owner");
+        }
+
+        RoomMember targetMembership = roomMemberRepository.findByRoomAndUserId(room, targetUserId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user is not a member of this room"));
+
+        currentUserMembership.setRole(RoomMemberRole.MEMBER);
+        targetMembership.setRole(RoomMemberRole.OWNER);
+
+        roomMemberRepository.save(currentUserMembership);
+        roomMemberRepository.save(targetMembership);
+
+        return new ActionResponse("Room ownership transferred");
     }
 
     private ChatRoom getRoomOrThrow(Long roomId) {
