@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sild.securechat_backend.securityevent.dto.SecurityEventResponse;
 import com.sild.securechat_backend.securityevent.dto.SecurityStatsResponse;
@@ -16,6 +18,7 @@ public class SecurityEventService {
         this.securityEventRepository = securityEventRepository;
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logEvent(
         Long userId,
         SecurityEventType eventType,

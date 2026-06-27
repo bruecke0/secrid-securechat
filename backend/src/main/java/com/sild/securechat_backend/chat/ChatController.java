@@ -6,15 +6,18 @@ import com.sild.securechat_backend.chat.dto.CreateMessageRequest;
 import com.sild.securechat_backend.chat.dto.MessageResponse;
 import com.sild.securechat_backend.chat.dto.RoomMemberResponse;
 import com.sild.securechat_backend.user.User;
+import com.sild.securechat_backend.chat.dto.ActionResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.service.annotation.DeleteExchange;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
@@ -87,5 +90,26 @@ public class ChatController {
         User currentUser = (User) authentication.getPrincipal();
 
         return chatService.getRoomMembers(roomId, currentUser);
+    }
+
+    @DeleteMapping("/{roomId}/leave")
+    public ActionResponse leaveRoom(
+        @PathVariable Long roomId, 
+        Authentication authentication
+    ) {
+        User currentUser = (User) authentication.getPrincipal();
+
+        return chatService.leaveRoom(roomId, currentUser);
+    }
+
+    @DeleteMapping("/{roomId}/members/{userId}")
+    public ActionResponse removeMember(
+        @PathVariable Long roomId,
+        @PathVariable Long userId,
+        Authentication authentication
+    ) {
+        User currentUser = (User) authentication.getPrincipal();
+
+        return chatService.removeMember(roomId, userId, currentUser);
     }
 }

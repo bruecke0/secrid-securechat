@@ -9,9 +9,11 @@ import com.sild.securechat_backend.securityevent.SecurityEventService;
 import com.sild.securechat_backend.securityevent.SecurityEventType;
 import com.sild.securechat_backend.securityevent.SecuritySeverity;
 import com.sild.securechat_backend.chat.dto.RoomMemberResponse;
+import com.sild.securechat_backend.chat.dto.ActionResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -144,6 +146,50 @@ public class ChatService {
             .stream()
             .map(this::mapToRoomMemberResponse)
             .toList();
+    }
+
+    @Transactional
+    public ActionResponse leaveRoom(Long roomId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        RoomMember membership = roomMemberRepository.findByRoomAndUser(room, currentUser)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room"));
+        
+        if (membership.getRole() == RoomMemberRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Room owner cannot leave the room yet");
+        }
+
+        roomMemberRepository.delete(membership);
+
+        return new ActionResponse("You left the room");
+    }
+
+    @Transactional
+    public ActionResponse removeMember(Long roomId, Long targetUserId, User currentUser) {
+        ChatRoom room = getRoomOrThrow(roomId);
+
+        RoomMember currentUserMembership = roomMemberRepository.findByRoomAndUser(room, currentUser)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this room"));
+
+        if (currentUserMembership.getRole() != RoomMemberRole.OWNER) {
+            logRoomAccessDenied(roomId, currentUser);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the room owner can remove members");
+        }
+
+        if (currentUser.getId().equals(targetUserId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Owner cannot remove themselves");
+        }
+
+        RoomMember targetMembership = roomMemberRepository.findByRoomAndUserId(room, targetUserId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user is not a member of this room"));
+
+        if (targetMembership.getRole() == RoomMemberRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot remove the room owner");
+        }
+
+        roomMemberRepository.delete(targetMembership);
+
+        return new ActionResponse("Member removed from room");
     }
 
     private ChatRoom getRoomOrThrow(Long roomId) {
